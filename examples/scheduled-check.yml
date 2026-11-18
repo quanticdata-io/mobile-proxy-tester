@@ -1,0 +1,27 @@
+# A GitHub Actions workflow that checks every morning that a sticky mobile
+# session holds its IP for 20 minutes. Copy it to .github/workflows/ in your
+# own repository and add the PROXY_URL secret.
+name: Mobile session check
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "mobile-proxy-tester @ git+https://github.com/quanticdata-io/mobile-proxy-tester"
+      - name: Watch for 25 minutes, fail if the IP changes within 20
+        env:
+          PROXY_URL: ${{ secrets.PROXY_URL }}
+        run: mobile-proxy-tester watch "$PROXY_URL" --interval 1m --duration 25m --min-hold 20m --csv samples.csv
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: samples
+          path: samples.csv
